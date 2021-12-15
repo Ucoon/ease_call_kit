@@ -126,11 +126,24 @@ public class EaseCallKitPlugin implements FlutterPlugin, MethodCallHandler {
   private void startSingleCall(JSONObject map, final Result result) throws JSONException {
     EaseCallType callType = map.getInt("call_type") == 0 ? EaseCallType.SINGLE_VOICE_CALL : EaseCallType.SINGLE_VIDEO_CALL;
     String user = map.getString("em_id");
-    Map<String,Object> ext = null;
+    JSONObject extJson = null;
+    Map<String,Object> extMap = null;
     if (map.has("ext")){
-      ext = JsonObjectToHashMap(map.getJSONObject("ext"));
+      extJson = map.getJSONObject("ext");
+      extMap = JsonObjectToHashMap(extJson);
+
     }
-    EaseCallKit.getInstance().startSingleCall(callType, user, ext);
+    if (extJson != null && extJson.has("user_map")) {
+      Map<String, EaseCallUserInfo> userMap = new HashMap<>();
+      JSONArray usersList = extJson.getJSONArray("user_map");
+      for (int i = 0; i < usersList.length(); i++) {
+        JSONObject userObject = (JSONObject) usersList.get(i);
+        EaseCallUserInfo userInfo = userInfoFromJson(userObject.getJSONObject("value"));
+        userMap.put(userObject.getString("key"), userInfo);
+      }
+      EaseCallKit.getInstance().getCallKitConfig().setUserInfoMap(userMap);
+    }
+    EaseCallKit.getInstance().startSingleCall(callType, user, extMap);
     post(new Runnable() {
       @Override
       public void run() {
